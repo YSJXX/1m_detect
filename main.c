@@ -15,8 +15,8 @@
 
 #define FIND 150
 
+uint32_t NF;     // DROP ACCEPT
 FILE *fp;
-int cnt=0;
 
 void dump(unsigned char* buf, int size) {
     int i;
@@ -47,13 +47,14 @@ int jfopen(u_char *data_buf)
                 cmp = FIND;
                 break;
         }
+        free(pStr);
     }
     if(cmp == FIND) return FIND;
     else return 0;
 }
 
 
-int check(unsigned char* buf)
+void check(unsigned char* buf)
 {
 
 
@@ -62,17 +63,15 @@ int check(unsigned char* buf)
     struct tcphdr * tcp_header = (struct tcphdr *) (buf + (ip_header->ihl<<2) );
     u_char * http = (u_char *)tcp_header + (tcp_header->th_off<<2); // next data 32
 
+
+
     regex_t state;
     //char *string ="Host: sungjun.yoon";
     const char *pattern= "Host: ([A-Za-z\\.0-9]+)";
     int rc;
-    char jbuffer[100];
     size_t nmatch =2;
     regmatch_t pmatch[1];
-    int jcheck;
-    u_char data_buf[200];
-
-
+    char jbuffer[100];
     printf("\n");
     if((rc = regcomp(&state,pattern,REG_EXTENDED)) != 0){
         printf("regcomp error!! '%s' \n",jbuffer);
@@ -81,6 +80,9 @@ int check(unsigned char* buf)
     rc = regexec(&state,(char *)http,nmatch,pmatch,0);
     //rc = regexec(&state,string,nmatch,pmatch,0);
     regfree(&state);
+
+    u_char data_buf[200];   //찾은 문자열 저장
+    int jcheck;
     if(rc !=0){
             printf("Failed to match '%s' with '%s', returning %d. \n",http,pattern,rc);
             //printf("Failed to match '%s' with '%s', returning %d. \n",string,pattern,rc);
@@ -93,14 +95,10 @@ int check(unsigned char* buf)
         printf("데이터 이동 확인: %s \n",data_buf);
         jcheck = jfopen(data_buf);
     }
-    printf("FIND :: %d \n",jcheck);
+
     printf("구분선 ---------------------------------------------------------\n");
-    if(jcheck==FIND)
-    {
-        return 1;
-    }
-    else
-        return 0;
+    if(jcheck==FIND)    NF=0;
+    else NF=1;
 }
 
 
@@ -155,13 +153,13 @@ static u_int32_t print_pkt (struct nfq_data *tb)
     if (ret >= 0)
         printf("payload_len=%d ", ret);
         //dump(data,ret);
-        int add = check(data);
-        //printf("ADD data check :: %d \n",add);
+        check(data);
+
 
 
     fputc('\n', stdout);
 
-    return id+add;
+    return (uint32_t)id;
 }
 
 
@@ -169,15 +167,9 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,
           struct nfq_data *nfa, void *data)
 {
     u_int32_t id = print_pkt(nfa);
-    //printf(":::::::::::::::::::::::: ID value :: %d \n",id);
-    ++cnt;
-    //printf("CNT value %d \n",(int)cnt);
     printf("entering callback\n");
-    if(cnt == (int)id)
-        return nfq_set_verdict(qh, id, NF_ACCEPT, 0, NULL);
-    else
-        id= id -1;
-        return nfq_set_verdict(qh, id, NF_DROP, 0, NULL);
+    //printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@%d \n",NF);
+    return nfq_set_verdict(qh, id, NF, 0, NULL);
 }
 
 int main(int argc, char *argv[])
