@@ -15,8 +15,8 @@
 
 #define FIND 150
 
-uint32_t NF;     // DROP ACCEPT
-FILE *fp;
+static uint32_t NF;     // DROP ACCEPT
+static FILE *fp;
 
 void dump(unsigned char* buf, int size) {
     int i;
@@ -32,11 +32,11 @@ int jfopen(u_char *data_buf)
 {
 
     u_char j_read_buff[200];
-    int jmemcmp;
-    int cmp;
+    int jmemcmp=0;
+    int cmp=0;
     if(fp != NULL)
     {
-        char *pStr;
+        char *pStr=NULL;
         while(!feof(fp))
         {
             pStr = fgets((char *)j_read_buff,sizeof(j_read_buff),fp);
@@ -82,13 +82,13 @@ void check(unsigned char* buf)
     regfree(&state);
 
     u_char data_buf[200];   //찾은 문자열 저장
-    int jcheck;
+    int jcheck=0;
     if(rc !=0){
             printf("Failed to match '%s' with '%s', returning %d. \n",http,pattern,rc);
             //printf("Failed to match '%s' with '%s', returning %d. \n",string,pattern,rc);
     }
     else {
-        sprintf(data_buf,"%s",&http[pmatch[1].rm_so]);
+        sprintf((char *)data_buf,"%s",&http[pmatch[1].rm_so]);
         //printf("시작 주소: %d :: 끝 주소:%d",&http[pmatch[1].rm_so],&http[pmatch[1].rm_eo]);
         //printf("길이 확인: %d \n",strlen(&http[pmatch[1].rm_so]));
         //sprintf(data_buf,"%s",&string[pmatch[1].rm_so]);
